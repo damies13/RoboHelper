@@ -66,13 +66,16 @@ class RoboHelper():
 		self.config = configparser.ConfigParser()
 		scrdir = os.path.abspath(os.path.dirname(__file__))
 		self.debugmsg(6, "scrdir: ", scrdir)
+		datadir = os.path.join(os.path.expanduser("~"), ".RoboHelper")
+		self.debugmsg(6, "datadir: ", datadir)
 
-		self.rh_ini = os.path.join(scrdir, "RoboHelper.ini")
+		self.rh_ini = os.path.join(datadir, "RoboHelper.ini")
 		if self.args.ini:
 			self.save_ini = False
 			self.debugmsg(5, "self.args.ini: ", self.args.ini)
 			self.rh_ini = self.args.ini
-
+		if not os.path.exists(datadir):
+			os.makedirs(datadir)
 		if os.path.isfile(self.rh_ini):
 			self.debugmsg(9, "rh_ini: ", self.rh_ini)
 			self.config.read(self.rh_ini)
@@ -94,13 +97,8 @@ class RoboHelper():
 			self.saveini()
 
 		if 'DataDir' not in self.config['Server']:
-			self.config['Server']['DataDir'] = scrdir
+			self.config['Server']['DataDir'] = datadir
 			self.saveini()
-
-		if 'DBFile' not in self.config['Server']:
-			self.config['Server']['DBFile'] = "TestDataTable.sqlite3"
-			self.saveini()
-
 
 		if 'Resources' not in self.config:
 			self.config['Resources'] = {}
@@ -168,7 +166,14 @@ class RoboHelper():
 		self.debugmsg(9, "mainloop ended")
 
 	def on_closing(self, *args):
-		self.debugmsg(9, "on_closing")
+		self.debugmsg(9, "on_closing", args)
+		self.debugmsg(0, "Shutting Down")
+		self.keeprunning = False
+		if self.appstarted:
+			self.httpserver.shutdown()
+			self.appstarted = False
+		sys.stdout.flush()
+		sys.stderr.flush()
 
 	def saveini(self):
 		self.debugmsg(7, " ")
@@ -217,7 +222,7 @@ class RoboHelper():
 		serverlink = self.console_link(serverurl)
 		self.debugmsg(0, "Starting Robo Helper Server", serverlink)
 		self.httpserver.serve_forever()
-		self.httpservercore.httpserver.serve_forever()
+		# self.httpservercore.httpserver.serve_forever()
 
 	def debugmsg(self, lvl, *msg):
 		msglst = []

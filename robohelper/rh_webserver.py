@@ -17,6 +17,18 @@ class RH_WebServer_Functions():
 
 		resp = RH_ResponseObject(self.core)
 		self.core.debugmsg(5, "resp:", resp)
+
+		try:
+			parsed_path = urllib.parse.urlparse(req.path)
+			self.core.debugmsg(5, "parsed_path:", parsed_path)
+			if parsed_path.path == '/':
+				resp = self.web_ui_page(req)
+
+		except Exception as e:
+			self.core.debugmsg(5, "Exception:", e)
+			resp.httpcode = 500
+			resp.message = str(e)
+
 		return resp
 
 	def post(self, req):
@@ -43,6 +55,26 @@ class RH_WebServer_Functions():
 		resp = RH_ResponseObject(self.core)
 		return resp
 
+
+	# Pah specific functions
+
+	def web_ui_page(self, req):
+		self.core.debugmsg(5, "web_ui_page:", req)
+
+		resp = RH_ResponseObject(self.core)
+		self.core.debugmsg(5, "resp:", resp)
+		resp.httpcode = 200
+		resp.message  = "<html>"
+		resp.message += 	"<head>"
+		resp.message += 	"<title>Robo Helper</title>"
+		resp.message += 	"</head>"
+		resp.message += 	"<body>"
+		resp.message += 	"<h1>Robo Helper</h1>"
+		resp.message += 	"</body>"
+		resp.message += "</html>"
+
+		return resp
+
 class RH_ResponseObject():
 
 	core = None
@@ -52,7 +84,8 @@ class RH_ResponseObject():
 
 	def __init__(self, core):
 		self.core = core
-		self.headers.append(("Server", "Robo Helper v" + self.core.version))
+		if len(self.headers) < 1:
+			self.headers.append(("Server", "Robo Helper v" + self.core.version))
 
 
 # class RH_WebServer_Blah(BaseHTTPRequestHandler):
