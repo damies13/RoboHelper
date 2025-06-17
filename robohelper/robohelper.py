@@ -25,6 +25,7 @@ from robot import run
 import rh_webserver
 
 class RoboHelper():
+	title = "Robo Helper"
 	version="0.0.1"
 	debuglvl = 0
 
@@ -35,7 +36,7 @@ class RoboHelper():
 	keeprunning = True
 
 	def __init__(self):
-		self.debugmsg(0, "Robo Helper")
+		self.debugmsg(0, self.title)
 		self.debugmsg(0, "	Version", self.version)
 		signal.signal(signal.SIGINT, self.on_closing)
 		signal.signal(signal.SIGHUP, self.on_closing)
@@ -98,6 +99,10 @@ class RoboHelper():
 
 		if 'DataDir' not in self.config['Server']:
 			self.config['Server']['DataDir'] = datadir
+			self.saveini()
+
+		if 'GitSrc' not in self.config['Server']:
+			self.config['Server']['GitSrc'] = ""
 			self.saveini()
 
 		if 'Resources' not in self.config:

@@ -35,6 +35,20 @@ class RH_WebServer_Functions():
 		self.core.debugmsg(5, "post:", req)
 
 		resp = RH_ResponseObject(self.core)
+		self.core.debugmsg(5, "resp:", resp)
+
+		try:
+			parsed_path = urllib.parse.urlparse(req.path)
+			self.core.debugmsg(5, "parsed_path:", parsed_path)
+			if parsed_path.path == '/settings':
+				self.save_settings(req)
+				resp = self.web_ui_page(req)
+
+		except Exception as e:
+			self.core.debugmsg(5, "Exception:", e)
+			resp.httpcode = 500
+			resp.message = str(e)
+
 		return resp
 
 	def put(self, req):
@@ -57,6 +71,20 @@ class RH_WebServer_Functions():
 
 
 	# Pah specific functions
+	def save_settings(self, req):
+		self.core.debugmsg(5, "save_settings:", req)
+
+		self.core.debugmsg(5, "req.headers:", req.headers)
+		self.core.debugmsg(5, "req.rfile:", req.rfile)
+
+		content_len = int(req.headers.get('Content-Length'))
+		self.core.debugmsg(5, "content_len:", content_len)
+		if content_len > 0:
+			post_body = req.rfile.read(content_len)
+		else:
+			post_body = req.rfile.read()
+		self.core.debugmsg(5, "post_body:", post_body)
+
 
 	def web_ui_page(self, req):
 		self.core.debugmsg(5, "web_ui_page:", req)
@@ -66,14 +94,28 @@ class RH_WebServer_Functions():
 		resp.httpcode = 200
 		resp.message  = "<html>"
 		resp.message += 	"<head>"
-		resp.message += 	"<title>Robo Helper</title>"
+		resp.message += 	"<title>" + self.core.title + " - " + self.core.version + "</title>"
 		resp.message += 	"</head>"
 		resp.message += 	"<body>"
-		resp.message += 	"<h1>Robo Helper</h1>"
+		resp.message += 	self.web_settings()
 		resp.message += 	"</body>"
 		resp.message += "</html>"
 
 		return resp
+
+	def web_settings(self):
+
+		html = '<div id="Settings">'
+		# html += 	'<form action="/settings" method="post" enctype="application/x-www-form-urlencoded">'
+		html += 	'<form action="/settings" method="post" >'
+		html += 	'<label for="gitsrc">Git URL</label>'
+		html += 		'<input id="gitsrc" type="text" value="' + self.core.config['Server']['GitSrc'] + '"  size="100" />'
+		html += 		'<input type="submit" value="Save Settings" />'
+		html += 	'</form>'
+		html += '</div>'
+
+		return html
+
 
 class RH_ResponseObject():
 
