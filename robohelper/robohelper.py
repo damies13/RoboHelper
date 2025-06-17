@@ -175,7 +175,7 @@ class RoboHelper():
 		self.debugmsg(0, "Shutting Down")
 		self.keeprunning = False
 		if self.appstarted:
-			self.httpserver.shutdown()
+			# self.httpserver.shutdown()
 			self.appstarted = False
 		sys.stdout.flush()
 		sys.stderr.flush()
@@ -208,8 +208,15 @@ class RoboHelper():
 		self.http_server_address = (srvip, srvport)
 		try:
 			self.appstarted = True
-			self.webserver_functions = rh_webserver.RH_WebServer_Functions(self)
-			self.httpserver = ThreadingHTTPServer(self.http_server_address, RH_WebServer)
+			# self.webserver_functions = rh_webserver.RH_WebServer_Functions(self)
+			# self.httpserver = ThreadingHTTPServer(self.http_server_address, RH_WebServer)
+			self.httpserver = rh_webserver.RH_WebServer(self)
+			# self.httpserver.app.run(host=srvip, port=srvport, debug=True)
+
+			self.httpthread = threading.Thread(target=self.httpserver.run_web_server)
+			self.httpthread.daemon = True
+			self.httpthread.start()
+
 		except PermissionError:
 			self.debugmsg(0, "Permission denied when trying :",self.http_server_address)
 			self.on_closing()
@@ -226,7 +233,7 @@ class RoboHelper():
 		serverurl = "http://{}:{}/".format(srvdisphost, srvport)
 		serverlink = self.console_link(serverurl)
 		self.debugmsg(0, "Starting Robo Helper Server", serverlink)
-		self.httpserver.serve_forever()
+		# self.httpserver.serve_forever()
 		# self.httpservercore.httpserver.serve_forever()
 
 	def debugmsg(self, lvl, *msg):
@@ -289,51 +296,51 @@ class RoboHelper():
 		run('.', include=['first'], variable=['LIST_BOOL:[True, True, True]'])
 
 
-class RH_WebServer(BaseHTTPRequestHandler):
-
-	def do_HEAD(self):
-		core.debugmsg(5, "do_HEAD")
-		self.process_response(core.webserver_functions.head(self))
-		return
-
-	def do_DELETE(self):
-		core.debugmsg(5, "do_DELETE")
-		self.process_response(core.webserver_functions.delete(self))
-		return
-
-	def do_PUT(self):
-		core.debugmsg(5, "do_PUT")
-		self.process_response(core.webserver_functions.put(self))
-		return
-
-	def do_POST(self):
-		core.debugmsg(5, "do_POST")
-		self.process_response(core.webserver_functions.post(self))
-		return
-
-	def do_GET(self):
-		core.debugmsg(5, "do_GET")
-		self.process_response(core.webserver_functions.get(self))
-		return
-
-	def process_response(self, objResp):
-
-		core.debugmsg(5, "objResp:", objResp)
-		core.debugmsg(5, "objResp.httpcode:", objResp.httpcode)
-		core.debugmsg(5, "objResp.headers:", objResp.headers)
-		core.debugmsg(5, "objResp.message:", objResp.message)
-
-		self.send_response(objResp.httpcode)
-		for header in objResp.headers:
-			self.send_header(header[0], header[1])
-		self.end_headers()
-		if objResp.message is not None:
-			self.wfile.write(bytes(objResp.message, "utf-8"))
-
-	# 	log_request is here to stop BaseHTTPRequestHandler logging to the console
-	# 		https://stackoverflow.com/questions/10651052/how-to-quiet-simplehttpserver/10651257#10651257
-	def log_request(self, code='-', size='-'):
-		core.debugmsg(9, "code:", code, "	size:", size, self)
+# class RH_WebServer(BaseHTTPRequestHandler):
+#
+# 	def do_HEAD(self):
+# 		core.debugmsg(5, "do_HEAD")
+# 		self.process_response(core.webserver_functions.head(self))
+# 		return
+#
+# 	def do_DELETE(self):
+# 		core.debugmsg(5, "do_DELETE")
+# 		self.process_response(core.webserver_functions.delete(self))
+# 		return
+#
+# 	def do_PUT(self):
+# 		core.debugmsg(5, "do_PUT")
+# 		self.process_response(core.webserver_functions.put(self))
+# 		return
+#
+# 	def do_POST(self):
+# 		core.debugmsg(5, "do_POST")
+# 		self.process_response(core.webserver_functions.post(self))
+# 		return
+#
+# 	def do_GET(self):
+# 		core.debugmsg(5, "do_GET")
+# 		self.process_response(core.webserver_functions.get(self))
+# 		return
+#
+# 	def process_response(self, objResp):
+#
+# 		core.debugmsg(5, "objResp:", objResp)
+# 		core.debugmsg(5, "objResp.httpcode:", objResp.httpcode)
+# 		core.debugmsg(5, "objResp.headers:", objResp.headers)
+# 		core.debugmsg(5, "objResp.message:", objResp.message)
+#
+# 		self.send_response(objResp.httpcode)
+# 		for header in objResp.headers:
+# 			self.send_header(header[0], header[1])
+# 		self.end_headers()
+# 		if objResp.message is not None:
+# 			self.wfile.write(bytes(objResp.message, "utf-8"))
+#
+# 	# 	log_request is here to stop BaseHTTPRequestHandler logging to the console
+# 	# 		https://stackoverflow.com/questions/10651052/how-to-quiet-simplehttpserver/10651257#10651257
+# 	def log_request(self, code='-', size='-'):
+# 		core.debugmsg(9, "code:", code, "	size:", size, self)
 
 
 if __name__ == "__main__":

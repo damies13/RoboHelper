@@ -1,115 +1,100 @@
 
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer, HTTPServer
-import urllib.parse
+# from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer, HTTPServer
+# import urllib.parse
 import json
 
-class RH_WebServer_Functions():
+import bottle
+
+app = bottle.Bottle()
+
+# https://bottlepy.org/docs/dev/tutorial.html#
+
+# routes
+
+@app.get('/')
+def route_get_home():
+	return app.rhw.web_ui_page()
+
+@app.post('/settings')
+def route_post_settings():
+	return app.rhw.save_settings()
+
+
+class RH_WebServer(bottle.Bottle):
 
 	core = None
 
 	def __init__(self, core):
 
+		self.app = app
 		self.core = core
+		self.app.rhw = self
 		self.core.debugmsg(5, "__init__")
 
-	def get(self, req):
-		self.core.debugmsg(5, "get:", req)
+	def api_object(self):
+		return self.app
 
-		resp = RH_ResponseObject(self.core)
-		self.core.debugmsg(5, "resp:", resp)
+	def run_web_server(self):
+		srvip = self.core.config['Server']['BindIP']
+		srvport = int(self.core.config['Server']['BindPort'])
 
-		try:
-			parsed_path = urllib.parse.urlparse(req.path)
-			self.core.debugmsg(5, "parsed_path:", parsed_path)
-			if parsed_path.path == '/':
-				resp = self.web_ui_page(req)
+		# self.app.run(host=srvip, port=srvport, debug=True)
+		self.app.run(host=srvip, port=srvport, quiet=True)
+		# self.app.run(host=srvip, port=srvport)
 
-		except Exception as e:
-			self.core.debugmsg(5, "Exception:", e)
-			resp.httpcode = 500
-			resp.message = str(e)
+	def save_settings(self):
+		self.core.debugmsg(5, "save_settings:", bottle.request)
+		print("save_settings:", bottle.request)
 
-		return resp
+		self.core.debugmsg(5, "req.headers:", bottle.request.headers)
+		print("req.headers:", dict(bottle.request.headers))
+		print("req.forms:", dict(bottle.request.forms))
 
-	def post(self, req):
-		self.core.debugmsg(5, "post:", req)
+		# self.core.debugmsg(5, "req.rfile:", req.rfile)
 
-		resp = RH_ResponseObject(self.core)
-		self.core.debugmsg(5, "resp:", resp)
+		# content_len = int(req.headers.get('Content-Length'))
+		# self.core.debugmsg(5, "content_len:", content_len)
+		# if content_len > 0:
+		# 	post_body = req.rfile.read(content_len)
+		# else:
+		# 	post_body = req.rfile.read()
+		# self.core.debugmsg(5, "post_body:", post_body)
 
-		try:
-			parsed_path = urllib.parse.urlparse(req.path)
-			self.core.debugmsg(5, "parsed_path:", parsed_path)
-			if parsed_path.path == '/settings':
-				self.save_settings(req)
-				resp = self.web_ui_page(req)
+		return self.web_ui_page(['Settings Saved'])
 
-		except Exception as e:
-			self.core.debugmsg(5, "Exception:", e)
-			resp.httpcode = 500
-			resp.message = str(e)
+	def web_ui_page(self, messages=[]):
 
-		return resp
+		# print("web_ui_page:")
+		# print("web_ui_page:", bottle.request)
+		# print("web_ui_page:", app)
 
-	def put(self, req):
-		self.core.debugmsg(5, "put:", req)
+		app.rhw.core.debugmsg(5, "web_ui_page:")
 
-		resp = RH_ResponseObject(self.core)
-		return resp
+		# resp = RH_ResponseObject(self.core)
+		# self.core.debugmsg(5, "resp:", resp)
+		# resp.httpcode = 200
+		html  = "<html>"
+		html += 	"<head>"
+		html += 	"<title>" + app.rhw.core.title + " - " + app.rhw.core.version + "</title>"
+		html += 	"</head>"
+		html += 	"<body>"
+		html += 	app.rhw.web_settings()
+		html += 		"<div id='messages'>"
+		for msg in messages:
+			html += 	"<div class='message'><span class='message_text'>" + msg + "</span></div>"
+		html += 		"</div>"
+		html += 	"</body>"
+		html += "</html>"
 
-	def delete(self, req):
-		self.core.debugmsg(5, "delete:", req)
-
-		resp = RH_ResponseObject(self.core)
-		return resp
-
-	def head(self, req):
-		self.core.debugmsg(5, "head:", req)
-
-		resp = RH_ResponseObject(self.core)
-		return resp
-
-
-	# Pah specific functions
-	def save_settings(self, req):
-		self.core.debugmsg(5, "save_settings:", req)
-
-		self.core.debugmsg(5, "req.headers:", req.headers)
-		self.core.debugmsg(5, "req.rfile:", req.rfile)
-
-		content_len = int(req.headers.get('Content-Length'))
-		self.core.debugmsg(5, "content_len:", content_len)
-		if content_len > 0:
-			post_body = req.rfile.read(content_len)
-		else:
-			post_body = req.rfile.read()
-		self.core.debugmsg(5, "post_body:", post_body)
-
-
-	def web_ui_page(self, req):
-		self.core.debugmsg(5, "web_ui_page:", req)
-
-		resp = RH_ResponseObject(self.core)
-		self.core.debugmsg(5, "resp:", resp)
-		resp.httpcode = 200
-		resp.message  = "<html>"
-		resp.message += 	"<head>"
-		resp.message += 	"<title>" + self.core.title + " - " + self.core.version + "</title>"
-		resp.message += 	"</head>"
-		resp.message += 	"<body>"
-		resp.message += 	self.web_settings()
-		resp.message += 	"</body>"
-		resp.message += "</html>"
-
-		return resp
+		return html
 
 	def web_settings(self):
 
 		html = '<div id="Settings">'
 		# html += 	'<form action="/settings" method="post" enctype="application/x-www-form-urlencoded">'
 		html += 	'<form action="/settings" method="post" >'
-		html += 	'<label for="gitsrc">Git URL</label>'
-		html += 		'<input id="gitsrc" type="text" value="' + self.core.config['Server']['GitSrc'] + '"  size="100" />'
+		html += 		'<label for="gitsrc">Git URL</label>'
+		html += 		'<input id="gitsrc" name="gitsrc" type="text" value="' + self.core.config['Server']['GitSrc'] + '"  size="100" />'
 		html += 		'<input type="submit" value="Save Settings" />'
 		html += 	'</form>'
 		html += '</div>'
@@ -117,17 +102,156 @@ class RH_WebServer_Functions():
 		return html
 
 
-class RH_ResponseObject():
 
-	core = None
-	httpcode = 404
-	headers = []
-	message = None
+	# these examples below are just demo's, should be removed before V2 goes to prod
+	@app.route('/hello')
+	def custom_route():
+		return 'Hello, World!'
 
-	def __init__(self, core):
-		self.core = core
-		if len(self.headers) < 1:
-			self.headers.append(("Server", "Robo Helper v" + self.core.version))
+	@app.route('/page2')
+	def page_2():
+
+		pg2html = """
+		<!DOCTYPE html>
+		<html>
+
+		<head>
+			<title>Page 2</title>
+		</head>
+		<body>
+			<h1> Page 2 </h1>
+			<a href="/">Home</a>
+		</body>
+		</html>
+		"""
+		return pg2html
+
+
+
+# class RH_WebServer_Functions():
+#
+# 	core = None
+#
+# 	def __init__(self, core):
+#
+# 		self.core = core
+# 		self.core.debugmsg(5, "__init__")
+# 	def get(self, req):
+# 		self.core.debugmsg(5, "get:", req)
+#
+# 		resp = RH_ResponseObject(self.core)
+# 		self.core.debugmsg(5, "resp:", resp)
+#
+# 		try:
+# 			parsed_path = urllib.parse.urlparse(req.path)
+# 			self.core.debugmsg(5, "parsed_path:", parsed_path)
+# 			if parsed_path.path == '/':
+# 				resp = self.web_ui_page(req)
+#
+# 		except Exception as e:
+# 			self.core.debugmsg(5, "Exception:", e)
+# 			resp.httpcode = 500
+# 			resp.message = str(e)
+#
+# 		return resp
+#
+# 	def post(self, req):
+# 		self.core.debugmsg(5, "post:", req)
+#
+# 		resp = RH_ResponseObject(self.core)
+# 		self.core.debugmsg(5, "resp:", resp)
+#
+# 		try:
+# 			parsed_path = urllib.parse.urlparse(req.path)
+# 			self.core.debugmsg(5, "parsed_path:", parsed_path)
+# 			if parsed_path.path == '/settings':
+# 				self.save_settings(req)
+# 				resp = self.web_ui_page(req)
+#
+# 		except Exception as e:
+# 			self.core.debugmsg(5, "Exception:", e)
+# 			resp.httpcode = 500
+# 			resp.message = str(e)
+#
+# 		return resp
+#
+# 	def put(self, req):
+# 		self.core.debugmsg(5, "put:", req)
+#
+# 		resp = RH_ResponseObject(self.core)
+# 		return resp
+#
+# 	def delete(self, req):
+# 		self.core.debugmsg(5, "delete:", req)
+#
+# 		resp = RH_ResponseObject(self.core)
+# 		return resp
+#
+# 	def head(self, req):
+# 		self.core.debugmsg(5, "head:", req)
+#
+# 		resp = RH_ResponseObject(self.core)
+# 		return resp
+#
+#
+# 	# Pah specific functions
+# 	def save_settings(self, req):
+# 		self.core.debugmsg(5, "save_settings:", req)
+#
+# 		self.core.debugmsg(5, "req.headers:", req.headers)
+# 		self.core.debugmsg(5, "req.rfile:", req.rfile)
+#
+# 		content_len = int(req.headers.get('Content-Length'))
+# 		self.core.debugmsg(5, "content_len:", content_len)
+# 		if content_len > 0:
+# 			post_body = req.rfile.read(content_len)
+# 		else:
+# 			post_body = req.rfile.read()
+# 		self.core.debugmsg(5, "post_body:", post_body)
+#
+#
+# 	def web_ui_page(self, req):
+# 		self.core.debugmsg(5, "web_ui_page:", req)
+#
+# 		resp = RH_ResponseObject(self.core)
+# 		self.core.debugmsg(5, "resp:", resp)
+# 		resp.httpcode = 200
+# 		resp.message  = "<html>"
+# 		resp.message += 	"<head>"
+# 		resp.message += 	"<title>" + self.core.title + " - " + self.core.version + "</title>"
+# 		resp.message += 	"</head>"
+# 		resp.message += 	"<body>"
+# 		resp.message += 	self.web_settings()
+# 		resp.message += 	"</body>"
+# 		resp.message += "</html>"
+#
+# 		return resp
+#
+# 	def web_settings(self):
+#
+# 		html = '<div id="Settings">'
+# 		# html += 	'<form action="/settings" method="post" enctype="application/x-www-form-urlencoded">'
+# 		html += 	'<form action="/settings" method="post" >'
+# 		html += 	'<label for="gitsrc">Git URL</label>'
+# 		html += 		'<input id="gitsrc" type="text" value="' + self.core.config['Server']['GitSrc'] + '"  size="100" />'
+# 		html += 		'<input type="submit" value="Save Settings" />'
+# 		html += 	'</form>'
+# 		html += '</div>'
+#
+# 		return html
+#
+#
+# class RH_ResponseObject():
+#
+# 	core = None
+# 	httpcode = 404
+# 	headers = []
+# 	message = None
+#
+# 	def __init__(self, core):
+# 		self.core = core
+# 		if len(self.headers) < 1:
+# 			self.headers.append(("Server", "Robo Helper v" + self.core.version))
 
 
 # class RH_WebServer_Blah(BaseHTTPRequestHandler):
